@@ -38,7 +38,7 @@ jobs:
     - name: Check variables
       run: echo "${{runner.os}} ${{matrix.config.os}} ${{matrix.config.cc}}"
 
-      - uses: actions/checkout@v2
+    - uses: actions/checkout@v2
 
     - name: Install MSVC Command Prompt
       if: runner.os == 'Windows'
@@ -96,6 +96,7 @@ jobs:
         echo $GITHUB_WORKSPACE
         ls $GITHUB_WORKSPACE
         ctest -T memcheck -V --overwrite MemoryCheckSuppressionFile=$GITHUB_WORKSPACE/valgrind_supressions.txt
+      shell: bash
   
     - name: Pack
       if: matrix.config.artifact != 0
