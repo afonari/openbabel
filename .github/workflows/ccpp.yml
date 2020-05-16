@@ -1,33 +1,73 @@
-name: C/C++ CI
+name: CMake Build Matrix
 
-on:
-  push:
-    branches: [ master ]
-  pull_request:
-    branches: [ master ]
+on: [push, pull_request]
+
+env:
+  BUILD_TYPE: Release
 
 jobs:
-  # Regular C build with two compilers, using the environment:
-  build_using_compiler_in_environment:
+  build:
+    name: ${{ matrix.config.name }}
+    runs-on: ${{ matrix.config.os }}
     strategy:
-        matrix:
-          compiler:
-            - gcc
-    runs-on: ubuntu-latest
+      fail-fast: false
+      matrix:
+        config:
+        - name: "Ubuntu Latest GCC"
+        - artifact: "Linux.tar.xz"
+        - os: ubuntu-latest
+        - cc: "gcc"
+        - cxx: "g++"
+
     steps:
-      - uses: actions/checkout@master
-      - uses: docker://lpenz/ghaction-cmake:latest
-        with:
-          cmakeflags: ${{ format('-DCMAKE_C_COMPILER={0}', matrix.compiler) }}
-  # Tests with various sanitizers and valgrind:
-  test:
-    strategy:
-        matrix:
-          preset:
-            - valgrind
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@master
-      - uses: docker://lpenz/ghaction-cmake:latest
-        with:
-            preset: ${{ matrix.preset }}
+    - name: Check variables
+      run: echo "${{runner.os}} ${{matrix.config.os}} ${{matrix.config.cc}}"
+
+    - uses: actions/checkout@v2
+
+    - name: Install MSVC Command Prompt
+      if: runner.os == 'Windows'
+      uses: ilammy/msvc-dev-cmd@v1
+      with:
+        arch: x86
+
+    - name: Install Dependencies (Linux)
+      if: runner.os == 'Linux'
+      run: sudo apt-get -qq install ninja-build swig libeigen3-dev libboost-all-dev
+    - name: Install Dependencies (Windows)
+      if: runner.os == 'Windows'
+      run: |
+        choco install ninja
+        echo "::set-env name=DEPS::msvc-dependencies-master"
+
+    - name: Install Dependencies (macOS)
+      if: runner.os == 'macOS'
+      run: brew install ninja swig eigen boost
+
+    - name: Install MSVC Dependencies
+      if: runner.os == 'Windows'
+      shell: cmake -P {0}
+      run: |
+          set(msvc_deps_url "https://github.com/timvdm/msvc-dependencies/archive/master.zip")
+          file(DOWNLOAD "${msvc_deps_url}" "$ENV{GITHUB_WORKSPACE}/msvc_deps.zip" SHOW_PROGRESS)
+          execute_process(COMMAND ${CMAKE_COMMAND} -E tar xvf "$ENV{GITHUB_WORKSPACE}/msvc_deps.zip")
+    - name: Install Dependencies (macOS)
+      if: runner.os == 'macOS'
+      run: brew install ninja swig eigen boost
+
+    - name: Configure
+      run: |
+        mkdir "${{ runner.workspace }}/build"
+        cd "${{ runner.workspace }}/build"
+        cmake $GITHUB_WORKSPACE -GNinja -DCMAKE_C_COMPILER=${{matrix.config.cc}} -DCMAKE_CXX_COMPILER=${{matrix.config.cxx}} ${{matrix.config.cmake_flags}}
+      shell: bash
+
+    - name: Build
+      run: CC=${{matrix.config.cc}} CXX=${{matrix.config.cxx}} cmake --build .
+      shell: bash
+      working-directory: ${{ runner.workspace }}/build
+
+    - name: Test
+      if: runner.os != 'Windows'
+      working-directory: ${{ runner.workspace }}/build
+      run: ctest --output-on-failure
