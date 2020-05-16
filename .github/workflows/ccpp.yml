@@ -84,8 +84,3 @@ jobs:
       run: CC=${{matrix.config.cc}} CXX=${{matrix.config.cxx}} cmake --build .
       shell: bash
       working-directory: ${{ runner.workspace }}/build
-
-    - name: Test
-      if: runner.os != 'Windows'
-      working-directory: ${{ runner.workspace }}/build
-        run: ctest --output-on-failure
