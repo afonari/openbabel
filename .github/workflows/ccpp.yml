@@ -1,0 +1,37 @@
+name: C/C++ CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  # Regular C build with two compilers, using the environment:
+  build_using_compiler_in_environment:
+    strategy:
+        matrix:
+          compiler:
+            - gcc
+            - clang
+    runs-on: ubuntu-latest
+    # We can use cmakeflags for this, or we can just use
+    # regular environment variables, as they are already
+    # supported by github actions:
+    env:
+      - CC: ${{ matrix.compiler }}
+    steps:
+      - uses: actions/checkout@master
+      - uses: docker://lpenz/ghaction-cmake:latest
+  # Tests with various sanitizers and valgrind:
+  test:
+    strategy:
+        matrix:
+          preset:
+            - valgrind
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+      - uses: docker://lpenz/ghaction-cmake:latest
+        with:
+            preset: ${{ matrix.preset }}
