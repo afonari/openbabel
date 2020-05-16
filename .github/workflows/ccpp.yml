@@ -1,9 +1,6 @@
 name: CMake Build Matrix
 
-on: [push, pull_request]
-
-env:
-  BUILD_TYPE: Release
+  on: [push, pull_request]
 
 jobs:
   build:
@@ -77,10 +74,23 @@ jobs:
       run: |
         mkdir "${{ runner.workspace }}/build"
         cd "${{ runner.workspace }}/build"
-        cmake $GITHUB_WORKSPACE -GNinja -DCMAKE_C_COMPILER=${{matrix.config.cc}} -DCMAKE_CXX_COMPILER=${{matrix.config.cxx}} ${{matrix.config.cmake_flags}}
+        cmake $GITHUB_WORKSPACE -GNinja -DCMAKE_C_COMPILER=${{matrix.config.cc}} -DCMAKE_CXX_COMPILER=${{matrix.config.cxx}} -DCMAKE_BUILD_TYPE=Debug ${{matrix.config.cmake_flags}}
       shell: bash
 
     - name: Build
       run: CC=${{matrix.config.cc}} CXX=${{matrix.config.cxx}} cmake --build .
       shell: bash
       working-directory: ${{ runner.workspace }}/build
+    
+    - name: Test
+      if: runner.os != 'Windows'
+      working-directory: ${{ runner.workspace }}/build
+      run: ctest -T memcheck -V --overwrite MemoryCheckSuppressionFile=${{ runner.workspace }}/valgrind_supressions.txt
+    
+    - name: Upload
+      if: matrix.config.artifact != 0
+      uses: actions/upload-artifact@v1
+        run: tar -czvf ${{ matrix.config.artifact }} Testing/Temporary
+      with:
+        path: ${{ runner.workspace }}/build/${{ matrix.config.artifact }}
+        name: ${{ matrix.config.artifact }}
