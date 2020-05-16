@@ -13,16 +13,12 @@ jobs:
         matrix:
           compiler:
             - gcc
-            - clang
     runs-on: ubuntu-latest
-    # We can use cmakeflags for this, or we can just use
-    # regular environment variables, as they are already
-    # supported by github actions:
-    env:
-      - CC: ${{ matrix.compiler }}
     steps:
       - uses: actions/checkout@master
       - uses: docker://lpenz/ghaction-cmake:latest
+        with:
+          cmakeflags: ${{ format('-DCMAKE_C_COMPILER={0}', matrix.compiler) }}
   # Tests with various sanitizers and valgrind:
   test:
     strategy:
