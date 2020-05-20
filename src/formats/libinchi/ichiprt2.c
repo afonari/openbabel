@@ -939,7 +939,7 @@ int MakeCRVString( ORIG_INFO *OrigInfo, int nLenCT, int bAddDelim,
     /*  produce output string; */
     int nLen = 0, len, k, bAbcNumbers;
     int bOvfl = *bOverflow;
-    char szValue[32];
+    char szValue[32] = "";
     int  bNext=0;
     bAbcNumbers = ( nCtMode & CT_MODE_ABC_NUMBERS );
     /*  add connection table string */
